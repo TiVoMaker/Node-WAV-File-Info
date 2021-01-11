@@ -83,14 +83,20 @@ wfi.infoFromBuffer = function (buffer, maybeTotalSize) {
 
 wfi.infoByFilename = function(filename, cb){
   var stats = fs.statSync(filename)
-  var buffer = new Buffer(40);  // first 40 bytes are RIFF header
+  var buffer = Buffer.alloc(40);  // first 40 bytes are RIFF header
   fs.open(filename, 'r', function(err, fd) {
     if(err) return cb(err);  // error probably TODO:check this!
     fs.read(fd, buffer, 0, 40, 0, function(err, num) {
       fs.close(fd, () => {
         let result = wfi.infoFromBuffer(buffer, stats.size);
         result.stats = stats;
-        cb(result);
+        if (result.error) {
+          var edat = new Error(`Invalid WAV file: ${JSON.stringify(result.invalid_reasons)}`);
+          edat.details = result;
+          cb(edat, null);
+        } else {
+          cb(null, result);
+        }
       });
     });
   });
